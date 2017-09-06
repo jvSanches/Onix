@@ -305,7 +305,9 @@ void loop(void){
           if(L_dist){
             Serial.println("Frente");
             setMotors(60,60);
-          }setMotors(50,0);
+          }else{
+            setMotors(50,0);
+          }
         }else if (L_dist){
           setMotors(0,50);
         }else{
