@@ -21,14 +21,23 @@ long remaining_time = 5000;
 unsigned long depressing_time;
 unsigned long start_time;
 unsigned long time_pressed = 0;
+unsigned int crawl_period = 60;
 
 //sensors:
 #define L_lin_threshold 450
 #define R_lin_threshold 450
 #define L_dis_threshold 270
 #define R_dis_threshold 200
+#define close_R_threshold 600
+#define close_L_threshold 660
+
 #define samples 15
 
+#define LEFT 1
+#define RIGHT 2
+
+unsigned long losing_time = 0;
+int last_seen = 0;
 
 int reading = 0;
 int L_D_R[samples] = {}; // [200,200,200,200,200,200,200,200,200,200];
@@ -203,9 +212,19 @@ void wait(int duration){
   }  
 }
   
+void crawl(int L_speed, int R_speed){
+  
+  if ((millis() / crawl_period) % 2 != 0){
+    setMotors(L_speed, -L_speed/5);
+  }else{
+    setMotors(-R_speed/5, R_speed);
+  }
+}
+
 void setMotors(int L_speed, int R_speed){
   L_speed = map(L_speed, -100, 100, -255, 255);
   R_speed = map(R_speed, -100, 100, -255, 255);
+
   if (L_speed > 0){
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
@@ -213,8 +232,8 @@ void setMotors(int L_speed, int R_speed){
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
   }else{
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, HIGH);
   }
   analogWrite(pwm_L_pin, abs(L_speed));
 
@@ -225,8 +244,8 @@ void setMotors(int L_speed, int R_speed){
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
   }else{
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, HIGH);
   }
   analogWrite(pwm_R_pin, abs(R_speed));
 }
@@ -303,13 +322,24 @@ void loop(void){
         /////////////Strategy 0 - Turn to object///////////    
         if(R_dist){
           if(L_dist){
-            Serial.println("Frente");
-            setMotors(60,60);
+            setMotors(0,0);
           }else{
-            setMotors(50,0);
+            setMotors(40,-40);
+            last_seen = RIGHT;
+            losing_time = millis();
           }
         }else if (L_dist){
-          setMotors(0,50);
+          setMotors(-40,40);
+          last_seen = LEFT;
+          losing_time = millis();
+          
+          
+        }else if (millis() - losing_time < 100){
+          if (last_seen == RIGHT){
+            setMotors(60,-60);
+          }else if (last_seen == LEFT){
+            setMotors(-60,60);
+          }
         }else{
           setMotors(0,0);
         }  
@@ -335,17 +365,197 @@ void loop(void){
           setMotors( 50, 50);
         }
       }
-
-
-
         break;
+      
       case 2:
-        Serial.println("Estrategia 2");
+      if (turning){
+        if (millis()- turn_start > 500 || L_dist || R_dist){
+          setMotors(0,0);
+          turning = 0;
+        }
+      }else{
+        if (L_line){
+          setMotors(0,-50);
+          turn_start = millis();
+          turning = 1;
+        }else if (R_line){
+          setMotors(-50,0);
+          turn_start = millis();
+          turning = 1;
+        }else{
+          if(R_dist){
+            if(L_dist){
+              setMotors(60,60);
+            }else{
+              setMotors(50,0);
+              last_seen = RIGHT;
+              losing_time = millis();
+            }
+          }else if (L_dist){
+            setMotors(0,50);
+            last_seen = LEFT;
+            losing_time = millis();
+          }else if (millis() - losing_time < 1000){
+          if (last_seen == RIGHT){
+            setMotors(60,0);
+          }else if (last_seen == LEFT){
+            setMotors(0,60);
+          }
+          }else{
+            setMotors(30,30);
+          }
+        }
+      }
+
+      case 3:
+        if (L_line || R_line){
+          setMotors(-100,-100);
+          wait(200);
+          setMotors(-80,80);
+          wait(130);
+         }else{
+           crawl(50,50);
+         }
         break;
+      
+      case 4:
+        if (turning){
+          if (millis()- turn_start > 130){
+            setMotors(0,0);
+            turning = 0;
+          }
+        }else{
+          if (L_line){
+            setMotors(-100,-100);
+            wait(100);
+            setMotors(-80,80);
+            turn_start = millis();
+            turning = 1;
+          }else if (R_line){
+            setMotors(-100,-100);
+            wait(100);            
+            setMotors(80,-80);
+            turn_start = millis();
+            turning = 1;
+          }else{
+            crawl( 50, 50);
+          }
+        }
+        break;
+      case 5:
+        if (turning){
+          if (millis()- turn_start > 500 || L_dist || R_dist){
+            setMotors(0,0);
+            turning = 0;
+          }
+        }else{
+          if (L_line){
+            setMotors(-50,0);
+            turn_start = millis();
+            turning = 1;
+          }else if (R_line){
+            setMotors(0,-50);
+            turn_start = millis();
+            turning = 1;
+          }else{
+            if(R_dist){
+              if(L_dist){
+                setMotors(0,0);
+              }else{
+                setMotors(50,0);
+                last_seen = RIGHT;
+                losing_time = millis();
+              }
+            }else if (L_dist){
+              setMotors(0,50);
+              last_seen = LEFT;
+              losing_time = millis();
+            }else if (millis() - losing_time < 100){
+            if (last_seen == RIGHT){
+              setMotors(60,0);
+            }else if (last_seen == LEFT){
+              setMotors(0,60);
+            }
+            }else{
+              crawl(40,40);
+            }
+          }
+        }
+        break;
+      case 6:
+        if (turning){
+          if (millis()- turn_start > 130){
+            setMotors(0,0);
+            turning = 0;
+          }
+        }else{
+          if (L_line){
+            setMotors(-100,-100);
+            wait(100);
+            setMotors(-80,80);
+            turn_start = millis();
+            turning = 1;
+          }else if (R_line){
+            setMotors(-100,-100);
+            wait(100);            
+            setMotors(80,-80);
+            turn_start = millis();
+            turning = 1;
+          }else{
+            if(R_dist){
+              if(L_dist){
+                setMotors(0,0);
+                wait(500);
+              }else{
+                setMotors(50,0);
+              }
+            }else if (L_dist){
+              setMotors(0,50);
+            }else{
+              crawl( 50, 50);
+            }
+          }
+        }
+        break;
+      case 7:
+        if(R_dist){
+          if(L_dist){
+            if (L_dist > close_L_threshold && R_dist > close_R_threshold){
+              setMotors(60,60);
+            }else{
+            setMotors(0,0);
+            }
+          }else{
+            setMotors(40,-40);
+            last_seen = RIGHT;
+            losing_time = millis();
+          }
+        }else if (L_dist){
+          setMotors(-40,40);
+          last_seen = LEFT;
+          losing_time = millis();
+          
+          
+        }else if (millis() - losing_time < 1000){
+          if (last_seen == RIGHT){
+            setMotors(60,0);
+          }else if (last_seen == LEFT){
+            setMotors(0,60);
+          }
+        }else{
+          setMotors(0,0);
+        }  
+
+        break;
+      
       default :
+        setMotors(0,0);
+        
         break;
+
 
     }
+
   }else if (mode == waiting){
     remaining_time = start_time - millis();
     if (remaining_time <= 0){
