@@ -26,10 +26,10 @@ unsigned long time_pressed = 0;
 #define ramp_start 30
 
 //sensors:
-#define L_lin_threshold 450
-#define R_lin_threshold 450
-#define L_dis_threshold 220
-#define R_dis_threshold 200
+#define L_lin_threshold 550
+#define R_lin_threshold 550
+#define L_dis_threshold 350
+#define R_dis_threshold 350
 #define close_R_threshold 740
 #define close_L_threshold 740
 
@@ -65,7 +65,7 @@ int pushing = 0;
 int ff_state =0;
 int ff_speed = 0;
 unsigned long ff_time;
-
+unsigned long push_start;
 
 U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NO_ACK);
 enum {BufSize=9};
@@ -437,26 +437,71 @@ void loop(void){
           }else{
             if(R_dist){
               if(L_dist){
-                fullFoward(100);
+                if (pushing) {
+                  if (millis() - push_start > 500){
+                    crawl(90,90,70);
+                  }
+                }else{
+                  setMotors(40,40);
+                  pushing = 1;
+                  push_start = millis();
+                }
               }else{
-                setMotors(50,0);
-                ff_speed = ramp_start;
+                pushing =0;
+                setMotors(50,-20);
+                last_seen = RIGHT;
+                losing_time = millis();
               }
             }else if (L_dist){
-              setMotors(0,50);
-              ff_speed = ramp_start;
+              pushing =0;
+              setMotors(-20,50);
+              last_seen = LEFT;
+              losing_time = millis();
+              
+              
+            }else if (millis() - losing_time < 500){
+              // pushing =0;
+              if (last_seen == RIGHT){
+                setMotors(60,-60);
+              }else if (last_seen == LEFT){
+                setMotors(-60,60);
+              }
             }else{
-              crawl( 50, 50, 150);
+              // pushing =0;
+              crawl(50,50, 150);
             }
           }
         }
         break;
      
 
-      case 3:
+        case 3:
+        /////////////Strategy 0 - Turn to object///////////    
+        
+        if(R_dist){
+          if(L_dist){
+            setMotors(40,40);
+          }else{
+            setMotors(40,-40);
+            last_seen = RIGHT;
+            losing_time = millis();
+          }
+        }else if (L_dist){
+          setMotors(-40,40);
+          last_seen = LEFT;
+          losing_time = millis();
+          
+          
+        }else if (millis() - losing_time < 500){
+          if (last_seen == RIGHT){
+            setMotors(60,-60);
+          }else if (last_seen == LEFT){
+            setMotors(-60,60);
+          }
+        }else{
+          setMotors(0,0);
+        }  
 
-        ramp(100);
-      
         break;
       
       case 4:
@@ -479,48 +524,17 @@ void loop(void){
             turn_start = millis();
             turning = 1;
           }else{
-            crawl( 50, 50, 150);
+            setMotors(40,40);
+            // crawl( 50, 50, 150);
           }
         }
         break;
       case 5:
-        if (turning){
-          if (millis()- turn_start > 500 || L_dist || R_dist){
-            setMotors(0,0);
-            turning = 0;
-          }
+        if(L_dist && R_dist){
+          setMotors(90,90);
+
         }else{
-          if (L_line){
-            setMotors(-50,0);
-            turn_start = millis();
-            turning = 1;
-          }else if (R_line){
-            setMotors(0,-50);
-            turn_start = millis();
-            turning = 1;
-          }else{
-            if(R_dist){
-              if(L_dist){
-                setMotors(0,0);
-              }else{
-                setMotors(50,0);
-                last_seen = RIGHT;
-                losing_time = millis();
-              }
-            }else if (L_dist){
-              setMotors(0,50);
-              last_seen = LEFT;
-              losing_time = millis();
-            }else if (millis() - losing_time < 100){
-            if (last_seen == RIGHT){
-              setMotors(60,0);
-            }else if (last_seen == LEFT){
-              setMotors(0,60);
-            }
-            }else{
-              crawl(40,40, 120);
-            }
-          }
+          strategy = 2;
         }
         break;
       case 6:
@@ -596,7 +610,13 @@ void loop(void){
         }  
 
         break;
-      
+      case 8:
+        if(R_dist){
+          setMotors(100,100);
+        }else{
+          setMotors(30,30);
+        }
+        break;
       default :
         setMotors(0,0);
         
