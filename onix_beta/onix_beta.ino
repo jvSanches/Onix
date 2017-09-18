@@ -250,16 +250,44 @@ void ramp(int speed){
 }
 
 
+// void setMotors(int L_speed, int R_speed){ /// before second assembly
+//   L_speed = map(L_speed, -100, 100, -255, 255);
+//   R_speed = map(R_speed, -100, 100, -255, 255);
+
+//   if (L_speed > 0){
+//     digitalWrite(IN3, LOW);
+//     digitalWrite(IN4, HIGH);
+//   }else if ( L_speed < 0){
+//     digitalWrite(IN3, HIGH);
+//     digitalWrite(IN4, LOW);
+//   }else{
+//     digitalWrite(IN3, HIGH);
+//     digitalWrite(IN4, HIGH);
+//   }
+//   analogWrite(pwm_L_pin, abs(L_speed));
+
+//   if (R_speed > 0){
+//     digitalWrite(IN1, HIGH);
+//     digitalWrite(IN2, LOW);
+//   }else if ( R_speed < 0){
+//     digitalWrite(IN1, LOW);
+//     digitalWrite(IN2, HIGH);
+//   }else{
+//     digitalWrite(IN1, HIGH);
+//     digitalWrite(IN2, HIGH);
+//   }
+//   analogWrite(pwm_R_pin, abs(R_speed));
+// }
 void setMotors(int L_speed, int R_speed){
   L_speed = map(L_speed, -100, 100, -255, 255);
   R_speed = map(R_speed, -100, 100, -255, 255);
 
   if (L_speed > 0){
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, HIGH);
-  }else if ( L_speed < 0){
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
+  }else if ( L_speed < 0){
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, HIGH);
   }else{
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, HIGH);
