@@ -68,19 +68,9 @@ unsigned long time_pressed = 0;
 
 int control_numbers[10] = {control_0, control_1, control_2, control_3, control_4, control_5, control_6, control_7, control_8,control_9};
 
-int getDigit(int data){
-  for(int i =0; i < 10; i++){
-    if(data == control_numbers[i]){
-      return i;
-    }
-  }
-  
-}
-
 
 unsigned long losing_time = 0;
 int last_seen = 0;
-
 int reading = 0;
 int L_D_R[samples] = {}; // [200,200,200,200,200,200,200,200,200,200];
 int LDR_C = 0;
@@ -97,7 +87,7 @@ int first_Run = 1;
 int strategy = 0;
 int mode = 0;
 
-
+int received_number;
 int turning = 0;
 unsigned long turn_start;
 int pushing = 0;
@@ -111,61 +101,99 @@ enum {BufSize=9};
 char buf[BufSize];
 
 void debug(){
-    while (1){
-      L_dist = analogRead(dist_L_pin);
-      R_dist = analogRead(dist_R_pin);
-      L_line = analogRead(line_L_pin);
-      R_line = analogRead(line_R_pin);
-      Serial.print("Left distance: ");
-      Serial.print(L_dist);
-      Serial.print("    Right distance: ");
-      Serial.print(R_dist);
-      Serial.print("    Left line: ");
-      Serial.print(L_line);
-      Serial.print("    Right line: ");
-      Serial.println(R_line);
-      u8g.firstPage();  
-      do 
-      {
-        drawDebug();
-      } while( u8g.nextPage() );
-      
-      while (digitalRead(button) == 0){
-        setMotors(100,100);
-      }
-        setMotors(0,0);
-      
+  while (1){
+    L_dist = analogRead(dist_L_pin);
+    R_dist = analogRead(dist_R_pin);
+    L_line = analogRead(line_L_pin);
+    R_line = analogRead(line_R_pin);
+    Serial.print("Left distance: ");
+    Serial.print(L_dist);
+    Serial.print("    Right distance: ");
+    Serial.print(R_dist);
+    Serial.print("    Left line: ");
+    Serial.print(L_line);
+    Serial.print("    Right line: ");
+    Serial.println(R_line);
+    u8g.firstPage();  
+    do 
+    {
+      drawDebug();
+    } while( u8g.nextPage() );
+    
+    while (digitalRead(button) == 0){
+      setMotors(100,100);
     }
+    setMotors(0,0);
+  }
 }
+// void read_IR_strategy(){
+//   unsigned long read_IR_time = millis();
+//   int received_number = 0;
+//   int valid_number = 0;
+//   while(millis()-read_IR_time < read_IR_timeout){
+//     if (irrecv.decode(&results)) {
+//       if (getDigit(results.value) >= 0){
+//         valid_number = 1 ;
+//         received_number = 10 * received_number;
+//         received_number = received_number + getDigit(results.value);        
+//       }
+//       read_IR_time = millis();
+//       delay(10);
+//       irrecv.resume(); // Receive the next value
+//     }
+//   }if(valid_number){
+//     strategy = received_number;
+//   }
+// }
 void read_IR_strategy(){
-  unsigned long read_IR_time = millis();
-  int received_number = 0;
-  int valid_number = 0;
-  while(millis()-read_IR_time < read_IR_timeout){
+  irrecv.resume();
+  received_number = -1;
+  while (1){
+    u8g.firstPage();  
+    do 
+    {
+      drawBlank();
+    } while( u8g.nextPage() );
+  
     if (irrecv.decode(&results)) {
-      if (getDigit(results.value) >= 0){
-        valid_number = 1 ;
+      
+      if (results.value == control_number){
+        if (received_number != -1){
+          strategy = received_number;
+        }
+        break;
+      }else if (getDigit(results.value) != -1){
+
+        if (received_number == -1){
+          received_number = 0;
+        }
         received_number = 10 * received_number;
-        received_number = received_number + getDigit(results.value);        
+        received_number = received_number + getDigit(results.value);  
       }
-      read_IR_time = millis();
-      delay(10);
+      
+      wait(250);
       irrecv.resume(); // Receive the next value
     }
-  }if(valid_number){
-    strategy = received_number;
   }
 }
 
+int getDigit(int data){
+  for(int i =0; i < 10; i++){
+    if(data == control_numbers[i]){
+      return i;
+    }
+  }
+  return -1;
+}
 void readSensors(){
   L_line = analogRead(line_L_pin);
   R_line = analogRead(line_R_pin);
   
   reading = analogRead(dist_L_pin); //// Left
   for (int j =0; j< 1+ abs(reading - L_dist_)/50 ; j++){
-  L_D_R[LDR_C] = reading;
-  LDR_C++;
-  if (LDR_C == samples){
+    L_D_R[LDR_C] = reading;
+    LDR_C++;
+    if (LDR_C == samples){
       LDR_C = 0;
     }
   }
@@ -214,6 +242,25 @@ R_dist_ = R_dist_ / samples;
   }
 }
 
+void drawBlank(){
+  snprintf (buf, BufSize, "%d", received_number);  
+  u8g.setFont(u8g_font_profont22r);
+  u8g.drawFrame(48,33,30,30);
+  u8g.drawFrame(49,34,28,28);
+  u8g.drawRBox(40,36,7,25, 2);
+  u8g.drawRBox(79,36,7,25, 2);
+  u8g.drawBox(40,21,46,12);
+  if (received_number == -1){
+
+  }else if (received_number < 10){
+    u8g.drawStr( 58, 54, buf );
+  }else{
+    u8g.drawStr( 51, 54, buf );
+    
+  }
+
+}
+
 void drawLogo(){
   u8g.drawBitmapP(0, 0 , 16, 64, Logoonix);
 }
@@ -240,7 +287,13 @@ void drawMenu() {
   u8g.drawRBox(40,36,7,25, 2);
   u8g.drawRBox(79,36,7,25, 2);
   u8g.drawBox(40,21,46,12);
-  u8g.drawStr( 58, 54, buf );
+  if (strategy < 10){
+    u8g.drawStr( 58, 54, buf );
+  }else{
+    u8g.drawStr( 51, 54, buf );
+    
+  }
+
   if (L_line){
     u8g.drawCircle(20, 30, 14, U8G_DRAW_UPPER_LEFT);
   }
@@ -288,55 +341,6 @@ void crawl(int L_speed, int R_speed, int crawl_period){
   }
 }
 
-// void fullFoward(int speed){
-//   if (speed > ff_speed && millis() - ff_time > ramp_time){
-//     ff_speed ++;
-//     ff_time = millis();
-//   }else{
-//    ff_speed = speed;
-//   }
-//   if ((millis() / ff_period) % 2 != 0){
-//     setMotors(ff_speed, 0.7 * ff_speed);
-//   }else{
-//     setMotors( 0.7 * ff_speed, ff_speed);
-//   }
-// }
-// void ramp(int speed){
-//   for (int ramp_speed = speed - ramp_start; ramp_speed <= speed; ramp_speed ++){
-//     setMotors(ramp_speed, ramp_speed);
-//     wait(ramp_time);
-//   }
-// }
-
-
-// void setMotors(int L_speed, int R_speed){ /// before second assembly
-//   L_speed = map(L_speed, -100, 100, -255, 255);
-//   R_speed = map(R_speed, -100, 100, -255, 255);
-
-//   if (L_speed > 0){
-//     digitalWrite(IN3, LOW);
-//     digitalWrite(IN4, HIGH);
-//   }else if ( L_speed < 0){
-//     digitalWrite(IN3, HIGH);
-//     digitalWrite(IN4, LOW);
-//   }else{
-//     digitalWrite(IN3, HIGH);
-//     digitalWrite(IN4, HIGH);
-//   }
-//   analogWrite(pwm_L_pin, abs(L_speed));
-
-//   if (R_speed > 0){
-//     digitalWrite(IN1, HIGH);
-//     digitalWrite(IN2, LOW);
-//   }else if ( R_speed < 0){
-//     digitalWrite(IN1, LOW);
-//     digitalWrite(IN2, HIGH);
-//   }else{
-//     digitalWrite(IN1, HIGH);
-//     digitalWrite(IN2, HIGH);
-//   }
-//   analogWrite(pwm_R_pin, abs(R_speed));
-// }
 void setMotors(int L_speed, int R_speed){
   L_speed = map(L_speed, -100, 100, -255, 255);
   R_speed = map(R_speed, -100, 100, -255, 255);
@@ -380,7 +384,7 @@ void setup(void){
   pinMode(IN4, OUTPUT);
   pinMode(button, INPUT);
   Serial.begin(9600);
-  while (!Serial){}
+  // while (!Serial){}
   
   u8g.firstPage();  
   do 
@@ -404,16 +408,19 @@ void loop(void){
   }
   //// IR Receive
   if (irrecv.decode(&results)) {
+    Serial.println(results.value);
     if (mode == menu){
       if (results.value == control_menu){
-        mode == IR_arm;
+        mode = IR_arm;
+        
+        wait(100);
       }else if(results.value == control_number){
         read_IR_strategy(); 
       }
     }else if(mode == IR_arm){
 
       if (results.value == control_power){
-        mode == waiting;
+        mode = waiting;
         start_time = millis() + start_delay;
       }else{
         mode = menu;
@@ -425,11 +432,6 @@ void loop(void){
     }
     irrecv.resume(); // Receive the next value
   }
-
-
-
-
-
 
   if (digitalRead(button) == 0){
     wait(10);
