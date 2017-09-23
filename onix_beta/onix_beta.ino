@@ -257,7 +257,7 @@ void drawBlank(){
   }else if (received_number < 10){
     u8g.drawStr( 58, 54, buf );
   }else{
-    u8g.drawStr( 51, 54, buf );
+    u8g.drawStr( 52, 54, buf );
     
   }
 
@@ -292,7 +292,7 @@ void drawMenu() {
   if (strategy < 10){
     u8g.drawStr( 58, 54, buf );
   }else{
-    u8g.drawStr( 51, 54, buf );
+    u8g.drawStr( 52, 54, buf );
     
   }
 
