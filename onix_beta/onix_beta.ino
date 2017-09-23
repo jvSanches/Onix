@@ -24,6 +24,8 @@ decode_results results;
 #define IR_arm 3
 #define start_delay 500//4800
 #define read_IR_timeout 1000
+
+#define strategies 10
 // times:
 long remaining_time = 5000;
 unsigned long depressing_time;
@@ -416,7 +418,20 @@ void loop(void){
         wait(100);
       }else if(results.value == control_number){
         read_IR_strategy(); 
+      }else if( results.value == control_vol_inc){
+        strategy++;
+        if (strategy >strategies){
+          strategy =strategies;
+        }
+      else if (results.value == control_vol_dec){
+        strategy--;
+        if(strategy<0){
+          strategy = 0;
+        }
       }
+      }
+
+
     }else if(mode == IR_arm){
 
       if (results.value == control_power){
@@ -452,7 +467,7 @@ void loop(void){
         start_time = millis() + start_delay;
       }else{
         strategy ++;
-        if (strategy > 9){
+        if (strategy > strategies){
           strategy = 0;
         }
       }
