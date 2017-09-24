@@ -22,11 +22,12 @@ decode_results results;
 #define waiting 1
 #define playing 2
 #define IR_arm 3
-#define start_delay 500//4800
+#define start_delay 4700
 #define read_IR_timeout 1000
 
 #define strategies 10
 // times:
+unsigned long ir_recv_time;
 long remaining_time = 5000;
 unsigned long depressing_time;
 unsigned long start_time;
@@ -128,55 +129,58 @@ void debug(){
     setMotors(0,0);
   }
 }
+
 // void read_IR_strategy(){
-//   unsigned long read_IR_time = millis();
-//   int received_number = 0;
-//   int valid_number = 0;
-//   while(millis()-read_IR_time < read_IR_timeout){
+//   irrecv.resume();
+//   received_number = -1;
+//   while (1){
+//     u8g.firstPage();  
+//     do 
+//     {
+//       drawStrategy();
+//     } while( u8g.nextPage() );
+  
 //     if (irrecv.decode(&results)) {
-//       if (getDigit(results.value) >= 0){
-//         valid_number = 1 ;
+      
+//       if (results.value == control_number){
+//         if (received_number != -1){
+//           strategy = received_number;
+//         }
+//         break;
+//       }else if (getDigit(results.value) != -1){
+
+//         if (received_number == -1){
+//           received_number = 0;
+//         }
 //         received_number = 10 * received_number;
-//         received_number = received_number + getDigit(results.value);        
+//         received_number = received_number + getDigit(results.value);  
 //       }
-//       read_IR_time = millis();
-//       delay(10);
+      
+//       wait(250);
 //       irrecv.resume(); // Receive the next value
 //     }
-//   }if(valid_number){
-//     strategy = received_number;
 //   }
 // }
 void read_IR_strategy(){
+  ir_recv_time = millis();
+  received_number = getDigit(results.value);
   irrecv.resume();
-  received_number = -1;
-  while (1){
+  while(millis() - ir_recv_time < 700 ){
     u8g.firstPage();  
-    do 
-    {
-      drawBlank();
-    } while( u8g.nextPage() );
-  
+      do 
+      {
+        drawStrategy();
+      } while( u8g.nextPage() );
     if (irrecv.decode(&results)) {
-      
-      if (results.value == control_number){
-        if (received_number != -1){
-          strategy = received_number;
-        }
-        break;
-      }else if (getDigit(results.value) != -1){
-
-        if (received_number == -1){
-          received_number = 0;
-        }
-        received_number = 10 * received_number;
-        received_number = received_number + getDigit(results.value);  
+      ir_recv_time = millis();
+      if (getDigit(results.value)!= -1){
+        received_number = received_number * 10;
+        received_number = received_number + getDigit(results.value);
       }
-      
-      wait(250);
       irrecv.resume(); // Receive the next value
     }
   }
+  strategy = received_number;
 }
 
 int getDigit(int data){
@@ -244,7 +248,7 @@ R_dist_ = R_dist_ / samples;
   }
 }
 
-void drawBlank(){
+void drawStrategy(){
   snprintf (buf, BufSize, "%d", received_number);  
   u8g.setFont(u8g_font_profont22r);
   u8g.drawFrame(48,33,30,30);
@@ -252,6 +256,7 @@ void drawBlank(){
   u8g.drawRBox(40,36,7,25, 2);
   u8g.drawRBox(79,36,7,25, 2);
   u8g.drawBox(40,21,46,12);
+  u8g.drawStr( 10, 15, "Strategy:" );
   if (received_number == -1){
 
   }else if (received_number < 10){
@@ -416,36 +421,38 @@ void loop(void){
         mode = IR_arm;
         
         wait(100);
-      }else if(results.value == control_number){
+      }else if(getDigit(results.value) != -1){
         read_IR_strategy(); 
+        irrecv.resume();
+
       }else if( results.value == control_vol_inc){
         strategy++;
         if (strategy >strategies){
           strategy =strategies;
         }
+      }
       else if (results.value == control_vol_dec){
         strategy--;
         if(strategy<0){
           strategy = 0;
         }
       }
-      }
-
 
     }else if(mode == IR_arm){
 
       if (results.value == control_power){
         mode = waiting;
+        
         start_time = millis() + start_delay;
-      }else{
+      }else if (results.value == control_menu){
         mode = menu;
       } 
-    }else{
+    }else if (results.value != control_power){
       mode = menu;
       setMotors(0,0);
       wait(100);
     }
-    irrecv.resume(); // Receive the next value
+    irrecv.resume(); 
   }
 
   if (digitalRead(button) == 0){
@@ -666,10 +673,40 @@ void loop(void){
           }
         }
         break;
+      case 5:
+        setMotors(-80,0);
+        wait(100);
+        setMotors(-80,-80):
+        wait(100);
+        setMotors(40,40);
+        wait(50);
+        strategy = 0;
+        break;
+      
+      case 6:
+        if (L_dist || R_dist){
+          strategy = 2;
+        }else{
+          if (rotating){
+            if (rotating == 1){// esquerda
+              setMotors(-30,30);
+            }else{
+              setMotors(30,-30);
+            }
+            if (millis()- rotating_tick > rotantin_period){
+              
+            }
+          }else{
+            setMotors(50,50);
+            front_tick
+
+
       default :
         setMotors(0,0);
-        
+        mode = menu;
         break;
+
+      
 
 
     }
