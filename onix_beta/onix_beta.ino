@@ -50,6 +50,7 @@ unsigned long time_pressed = 0;
 #define RIGHT 2
 
 ////////// IR Control _ LG
+#define control_header 8758
 #define control_power 875853959
 #define control_menu 875845034
 #define control_vol_inc 875882519
@@ -415,42 +416,43 @@ void loop(void){
   }
   //// IR Receive
   if (irrecv.decode(&results)) {
-    Serial.println(results.value);
-    if (mode == menu){
-      if (results.value == control_menu){
-        mode = IR_arm;
-        
-        wait(100);
-      }else if(getDigit(results.value) != -1){
-        read_IR_strategy(); 
-        irrecv.resume();
+    if (results.value/100000 == control_header){
+      if (mode == menu){
+        if (results.value == control_menu){
+          mode = IR_arm;
+          
+          wait(100);
+        }else if(getDigit(results.value) != -1){
+          read_IR_strategy(); 
+          irrecv.resume();
 
-      }else if( results.value == control_vol_inc){
-        strategy++;
-        if (strategy >strategies){
-          strategy =strategies;
+        }else if( results.value == control_vol_inc){
+          strategy++;
+          if (strategy >strategies){
+            strategy =strategies;
+          }
         }
-      }
-      else if (results.value == control_vol_dec){
-        strategy--;
-        if(strategy<0){
-          strategy = 0;
+        else if (results.value == control_vol_dec){
+          strategy--;
+          if(strategy<0){
+            strategy = 0;
+          }
         }
-      }
 
-    }else if(mode == IR_arm){
+      }else if(mode == IR_arm){
 
-      if (results.value == control_power){
-        mode = waiting;
-        
-        start_time = millis() + start_delay;
-      }else if (results.value == control_menu){
+        if (results.value == control_power){
+          mode = waiting;
+          
+          start_time = millis() + start_delay;
+        }else if (results.value == control_menu){
+          mode = menu;
+        } 
+      }else if (results.value != control_power){
         mode = menu;
-      } 
-    }else if (results.value != control_power){
-      mode = menu;
-      setMotors(0,0);
-      wait(100);
+        setMotors(0,0);
+        wait(100);
+      }
     }
     irrecv.resume(); 
   }
@@ -489,10 +491,8 @@ void loop(void){
   readSensors();
   if(mode == playing){
     switch (strategy){
+      
       case 0:
-        Serial.println("Strat 0");
-        break;
-      case 9: /// old 0
         /////////////Strategy 0 - Turn to object///////////    
         if(R_dist){
           if(L_dist){
@@ -668,38 +668,20 @@ void loop(void){
             turn_start = millis();
             turning = 1;
           }else{
-            setMotors(40,40);
-            // crawl( 50, 50, 150);
+            crawl( 50, 50, 150);
           }
         }
         break;
       case 5:
         setMotors(-80,0);
         wait(100);
-        setMotors(-80,-80):
+        setMotors(-80,-80);
         wait(100);
         setMotors(40,40);
         wait(50);
         strategy = 0;
         break;
       
-      case 6:
-        if (L_dist || R_dist){
-          strategy = 2;
-        }else{
-          if (rotating){
-            if (rotating == 1){// esquerda
-              setMotors(-30,30);
-            }else{
-              setMotors(30,-30);
-            }
-            if (millis()- rotating_tick > rotantin_period){
-              
-            }
-          }else{
-            setMotors(50,50);
-            front_tick
-
 
       default :
         setMotors(0,0);
