@@ -35,6 +35,7 @@ unsigned long time_pressed = 0;
 #define ff_period 100
 #define ramp_time 200
 #define ramp_start 30
+#define line_brake_time 200
 
 //sensors:
 #define L_lin_threshold 550
@@ -448,7 +449,7 @@ void loop(void){
         }else if (results.value == control_menu){
           mode = menu;
         } 
-      }else if (results.value != control_power){
+      }else{ /// if (results.value != control_power){
         mode = menu;
         setMotors(0,0);
         wait(100);
@@ -569,13 +570,13 @@ void loop(void){
         }else{
           if (L_line){
             setMotors(-100,-100);
-            wait(100);
+            wait(line_brake_time);
             setMotors(80,-80);
             turn_start = millis();
             turning = 1;
           }else if (R_line){
             setMotors(-100,-100);
-            wait(100);            
+            wait(line_brake_time);            
             setMotors(-80,80);
             turn_start = millis();
             turning = 1;
@@ -657,13 +658,13 @@ void loop(void){
         }else{
           if (L_line){
             setMotors(-100,-100);
-            wait(100);
+            wait(300);
             setMotors(80,-80);
             turn_start = millis();
             turning = 1;
           }else if (R_line){
             setMotors(-100,-100);
-            wait(100);            
+            wait(300);            
             setMotors(-80,80);
             turn_start = millis();
             turning = 1;
@@ -676,10 +677,10 @@ void loop(void){
         setMotors(-80,0);
         wait(100);
         setMotors(-80,-80);
-        wait(100);
+        wait(200);
         setMotors(40,40);
         wait(50);
-        strategy = 0;
+        strategy = 2;
         break;
       
 
